@@ -1,15 +1,10 @@
 package service
 
 import (
-  "fmt"
-	"net/http"
 	"encoding/json"
 
-	
-	"github.com/go-chi/chi"
-	"gonum.org/v1/gonum/tensor"
-	jose "gopkg.in/square/go-jose.v2"
-	"github.com/go-chi/chi/middleware"
+	"gopkg.in/square/go-jose.v2"
+	"gorgonia.org/tensor"
 )
 
 type (
@@ -28,7 +23,7 @@ func (a *AppService) Init() error {
   
   model := loadModelFromLibrary()
   
-  ciphertext, err := encryptModel("encrption-key", model)
+  ciphertext, err := encryptModel([]byte("encrption-key"), model)
   if err != nil {
     return err
   }
@@ -36,6 +31,8 @@ func (a *AppService) Init() error {
   if err :=  storeEncryptedModelToDB(ciphertext); err != nil {
     return err
   }
+
+  return nil
 }
 
 func (a *AppService) Predict(input string) (string, error) {
@@ -46,7 +43,7 @@ func (a *AppService) Predict(input string) (string, error) {
     return "", err
   }
   
-  model, err := decryptModel("encrption-key", ciphertext)
+  model, err := decryptModel([]byte("encrption-key"), ciphertext)
   if err != nil {
     return "", err
   }
@@ -110,16 +107,17 @@ func decryptModel(key []byte, ciphertext string) (*tensor.Dense, error) {
     if err != nil {
         return nil, err
     }
+
+    var model tensor.Dense
   
-   // Serialize the model
-    modelJSON, err := json.UnMarshal(modelJSON, &model)
-    if err != nil {
+    err = json.Unmarshal([]byte(modelJSON), &model)
+    if err!= nil {
         return nil, err
     }
 
     return &model, nil
 }
-
+   
 
 
 //running a PyTorch model

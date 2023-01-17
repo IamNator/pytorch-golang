@@ -6,7 +6,7 @@ import (
 
 
 type PytorchModel struct {
-  Name string. `json:"name"`
+  Name string `json:"name"`
 	Version string `json:"version"`
 	Model []byte `json:"model"`
 	Key []byte `json:"key"`
@@ -18,7 +18,8 @@ func (p *PytorchModel) SetModel(b any) error {
     return err
   }
   
-  copy(&p.Model, byteData)
+  copy(p.Model, byteData)
+  return nil
 }
 
 
@@ -28,7 +29,8 @@ func (p *PytorchModel) SetKey(b any) error {
     return err
   }
   
-  copy(&p.Key, byteData)
+  copy(p.Key, byteData)
+  return nil
 }
 
 

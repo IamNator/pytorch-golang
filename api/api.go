@@ -1,7 +1,8 @@
 package api
 
 import (
-  "net/http"
+	"encoding/json"
+	"net/http"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -10,22 +11,22 @@ import (
 
 type (
   IAPIService interface {
-    Predict(input string) output string, err error
+    Predict(input string) (output string, err error)
   }
 )
 
 type (
     API struct {
       Router *chi.Mux
-      Key string
       service IAPIService
     }
 )
-func New(r *chi.Mux, key string, srv IAPIService) *API {
-  return &API{Router: r, Key: key, service: srv}
+func New(r *chi.Mux, srv IAPIService) *API {
+  return &API{Router: r, service: srv}
 } 
 
 func (a *API) Run(port string) error {
+
   r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -33,21 +34,26 @@ func (a *API) Run(port string) error {
 	r.Post("/predict", func(w http.ResponseWriter, r *http.Request) {
 		// Get input data from the request body
     var input struct{ Input string `json:"input"` }
-    if err := r.Bind(&input); err != nil {
-      w.Write(err.Error())
+    if err := json.NewDecoder(r.Body).Decode(&input); err!= nil {
+      w.WriteHeader(http.StatusBadRequest)
+      w.Write([]byte(err.Error()))
       return
     }
     
 		// Apply the model to the input data
-    output, err := a.Predict(input.Input)
+    output, err := a.service.Predict(input.Input)
     if err != nil {
-      w.Write(err.Error())
+      w.WriteHeader(http.StatusInternalServerError)
+      w.Write([]byte(err.Error()))
       return
     }
     
 
 		// Write the output to the response body
-		w.Write(output)
+		w.WriteHeader(http.StatusOK)
+    contentType := "application/json charset=utf-8"
+    w.Header().Set("Content-Type", contentType)
+    w.Write([]byte(output))
 	})
 
 	return http.ListenAndServe(":"+port, r)

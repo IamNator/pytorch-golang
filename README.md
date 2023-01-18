@@ -43,5 +43,7 @@ It also allows for easier scaling, if multiple instances of the Go app need to a
 
 The Go app serves as a bridge between the client and the PyTorch model, handling the encryption and loading of the model as well as serving the API endpoint, handling the incoming requests and returning the output.
 
+![image](https://user-images.githubusercontent.com/43158886/213165340-a126adcd-0f47-486a-9dec-297d06319c15.png)
+
 
 

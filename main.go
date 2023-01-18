@@ -20,3 +20,5 @@ func main() {
 	log.Fatal(newAPI.Run("3000"))
 }
 
+
+//https://debricked.com/select/package/golang-github.com%2Fpytorch%2Fserve

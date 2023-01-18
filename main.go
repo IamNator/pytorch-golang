@@ -1,7 +1,7 @@
 package main
 
 import (
-	"net/http"
+	"log"
 
 	"github.com/IamNator/pytorch-golang/api"
 	"github.com/IamNator/pytorch-golang/service"

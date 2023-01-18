@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 
 	"gopkg.in/square/go-jose.v2"
 	"gorgonia.org/tensor"
@@ -27,8 +28,10 @@ func (a *AppService) Init() error {
   if err != nil {
     return err
   }
+
+  key := findCatModelStoreKey
   
-  if err :=  storeEncryptedModelToDB(ciphertext); err != nil {
+  if err :=  storeEncryptedModelToDB(key,ciphertext); err != nil {
     return err
   }
 
@@ -48,7 +51,7 @@ func (a *AppService) Predict(input string) (string, error) {
     return "", err
   }
  
-  return runPytorchModel(input, model),  nil
+  return runPytorchModel(input, model)
 }
 
 
@@ -58,15 +61,34 @@ func loadModelFromLibrary() *tensor.Dense {
   return &tensor.Dense{}
 }
 
+
+type (
+  ModelStoreKey string
+)
+
+const (
+  findCatModelStoreKey ModelStoreKey = "findCatModel"
+  findDogModelStoreKey ModelStoreKey = "findDogModel"
+)
+
+var (
+  modelStore = make(map[ModelStoreKey]string)
+)
+
 // Store the PyTorch Model to DB
-func storeEncryptedModelToDB(e string) error {
-  return nil 
+func storeEncryptedModelToDB(key ModelStoreKey, model string) error {
+   modelStore[key] = model
+   return nil
 }
 
 
 // Fetch the PyTorch Model from DB
-func fetchEncryptedModelToDB(modelKey string) (string, error) {
-  return "", nil
+func fetchEncryptedModelToDB(modelKey ModelStoreKey) (string, error) {
+  if model, ok := modelStore[modelKey]; ok {
+    return model, nil
+  } else {
+    return "", errors.New("model not found")
+  }
 }
 
 
@@ -83,27 +105,28 @@ func encryptModel(key []byte, model *tensor.Dense) (string, error) {
     if err != nil {
         return "", err
     }
-    ciphertext, err := encrypter.Encrypt(modelJSON)
+
+    obj, err := encrypter.Encrypt(modelJSON)
     if err != nil {
         return "", err
     }
 
-    return ciphertext, nil
+    return obj.FullSerialize(), nil
 }
 
 
 
 //decrypt a PyTorch model
 func decryptModel(key []byte, ciphertext string) (*tensor.Dense, error) {
-   
 
-    // Decrypte the model
-    decrypter, err := jose.NewEncrypter(jose.A256GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: key}, nil)
-    if err != nil {
-        return "", err
+
+   obj, err := jose.ParseEncrypted(ciphertext)
+    if err!= nil {
+        return nil, err
     }
   
-    modelJSON, err := decrypter.Decrypt(ciphertext)
+    // Decrypte the model
+    modelJSON, err := obj.Decrypt(ciphertext)
     if err != nil {
         return nil, err
     }
@@ -121,9 +144,15 @@ func decryptModel(key []byte, ciphertext string) (*tensor.Dense, error) {
 
 
 //running a PyTorch model
-func runPytorchModel(input string, model *tensor.Dense) string {
+func runPytorchModel(input string, model *tensor.Dense) (string, error) {
     // Run the model on input data
-    return model.Apply(tensor.NewDense(input))
+  
+    retValue, err := model.Apply(input)
+    if err != nil {
+      return "", err
+    }
+
+    return retValue.String(), nil
 }
 
 
